@@ -33,6 +33,9 @@ public:
         vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
         fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
         gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+        std::cout << "v : " << vertexCode << std::endl;
+        std::cout << "f : " << fragmentCode << std::endl;
         try
         {
             // open files
@@ -59,7 +62,9 @@ public:
             }
         }
         catch (std::ifstream::failure e)
-        {
+        {   
+            std::cout << "v : " << vertexCode << std::endl;
+            std::cout << "f : " << fragmentCode << std::endl;
             std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
         }
         const char* vShaderCode = vertexCode.c_str();

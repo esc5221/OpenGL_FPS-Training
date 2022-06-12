@@ -21,10 +21,11 @@
 TextRenderer::TextRenderer(unsigned int width, unsigned int height)
 {
     // load and configure shader
-    this->TextShader = Shader("../../shaders/text_2d.vs", "../../shaders/text_2d.fs");
+    this->TextShader = Shader("shader_text_2d.vs", "shader_text_2d.fs");
     this->TextShader.use();
     this->TextShader.setMat4("projection", glm::ortho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
     this->TextShader.setInt("text", 0);
+    this->TextShader.setFloat("alpha", 1.0f);
 
     // configure VAO/VBO for texture quads
     glGenVertexArrays(1, &this->VAO);
@@ -99,11 +100,12 @@ void TextRenderer::Load(std::string font, unsigned int fontSize)
     FT_Done_FreeType(ft);
 }
 
-void TextRenderer::RenderText(std::string text, float x, float y, float scale, glm::vec3 color)
+void TextRenderer::RenderText(std::string text, float x, float y, float scale, glm::vec3 color, float alpha)
 {
     // activate corresponding render state	
     this->TextShader.use();
     this->TextShader.setVec3("textColor", color);
+    this->TextShader.setFloat("alpha", alpha);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(this->VAO);
 
