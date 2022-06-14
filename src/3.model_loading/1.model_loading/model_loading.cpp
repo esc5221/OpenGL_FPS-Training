@@ -251,7 +251,6 @@ int main()
         modelShader.setMat4("projection", projection);
         modelShader.setMat4("view", view);
         modelShader.setFloat("alpha", 1.0f);
-        modelShader.setInt("is_billboard", 0);
         colorShader.use();
         colorShader.setMat4("projection", projection);
         colorShader.setMat4("view", view);
@@ -333,7 +332,10 @@ int main()
 					break;
 				}
 			}
-            if(hit_type == 0) missed += 1;
+            if (hit_type == 0) {
+                missed += 1;
+                showMarker = false;
+            }
             else{
                 hitted += 1;
                 showMarker = true;
@@ -456,20 +458,18 @@ int main()
         glDisable(GL_DEPTH_TEST);
 
         int accuracy = (hitted==0 && missed==0 )? 0 : int(100 * (float(hitted) / float(hitted + missed)));
-        std::cout << "accuracy: " << accuracy << "%" << std::endl;
 
-        Text->RenderText("+", SCR_WIDTH/2, SCR_HEIGHT/2, 1.0f, glm::vec3(0.1f, 1.0f, 0.1f));
         Text->RenderText("Killed  : " + std::to_string(hitted), 0.0f, 0.0f, 1.0f, glm::vec3(0.0f, 0.0f, 0.2f));
         Text->RenderText("Missed  : " + std::to_string(missed), 0.0f, 40.0f, 1.0f, glm::vec3(0.0f, 0.0f, 0.2f));
         Text->RenderText("Accuracy: " + std::to_string(accuracy) + "%", 0.0f, 80.0f, 1.0f, glm::vec3(0.0f, 0.0f, 0.2f));
 
+        Text->RenderText("+", (SCR_WIDTH-24.0f)/2, (SCR_HEIGHT-24.0f) / 2, 1.0f, glm::vec3(0.1f, 1.0f, 0.1f));
         if(last_hit_type == 1 && showMarker){
-            Text->RenderText("x", SCR_WIDTH/2 - 16.0f, SCR_HEIGHT/2 - 24.0f, 2.0f, glm::vec3(0.8f, 0.8f, 0.8f), decayAlpha);
+            Text->RenderText("x", (SCR_WIDTH ) / 2 - 27.5, SCR_HEIGHT/ 2 - 35, 2.0f, glm::vec3(0.8f, 0.8f, 0.8f), decayAlpha);
         }
         else if(last_hit_type == 2 && showMarker){
-            Text->RenderText("x", SCR_WIDTH/2 - 16.0f, SCR_HEIGHT/2 - 24.0f, 2.0f, glm::vec3(0.8f, 0.35f, 0.35f), decayAlpha);
+            Text->RenderText("x", (SCR_WIDTH - 48.0f) / 2, (SCR_HEIGHT - 48.0f) / 2, 2.0f, glm::vec3(0.8f, 0.35f, 0.35f), decayAlpha);
         }
-
         glEnable(GL_DEPTH_TEST);
 
         // floating point 
