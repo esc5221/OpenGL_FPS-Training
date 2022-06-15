@@ -114,20 +114,20 @@ int main()
     
     // load models
     // -----------
-    Model mapModel(FileSystem::getPath("resources/objects/map3/range_cut3.obj"));
-    Model botModel(FileSystem::getPath("resources/objects/bot/training_bot5.obj"));
-    Model boxModel(FileSystem::getPath("resources/objects/box/box.obj"));
-    Model transboxModel(FileSystem::getPath("resources/objects/transbox/transbox.obj"));
+    Model mapModel("../../resources/objects/map3/range_cut3.obj");
+    Model botModel("../../resources/objects/bot/training_bot5.obj");
+    Model boxModel("../../resources/objects/box/box.obj");
+    Model transboxModel("../../resources/objects/transbox/transbox.obj");
 
     // skybox
     std::vector<std::string> faces
     {
-        FileSystem::getPath("resources/objects/skybox/right.jpg"),
-        FileSystem::getPath("resources/objects/skybox/left.jpg"),
-        FileSystem::getPath("resources/objects/skybox/top.jpg"),
-        FileSystem::getPath("resources/objects/skybox/bottom.jpg"),
-        FileSystem::getPath("resources/objects/skybox/front.jpg"),
-        FileSystem::getPath("resources/objects/skybox/back.jpg")
+        "../../resources/objects/skybox/right.jpg",
+        "../../resources/objects/skybox/left.jpg",
+        "../../resources/objects/skybox/top.jpg",
+        "../../resources/objects/skybox/bottom.jpg",
+        "../../resources/objects/skybox/front.jpg",
+        "../../resources/objects/skybox/back.jpg"
     };
     CubemapTexture skyboxTexture = CubemapTexture(faces);
     unsigned int VAOskybox, VBOskybox;
@@ -169,7 +169,7 @@ int main()
     // initilize text renderer
     TextRenderer *Text;
     Text = new TextRenderer(SCR_WIDTH, SCR_HEIGHT);
-    Text->Load(FileSystem::getPath("resources/fonts/OCRAEXT.TTF").c_str(), 48);
+    Text->Load("../../resources/fonts/OCRAEXT.TTF", 48);
     std::string message;
 
     glm::vec3 last_ray_origin;
