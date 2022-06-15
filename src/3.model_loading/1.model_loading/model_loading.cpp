@@ -475,7 +475,7 @@ int main()
         }
         //   headshot hit marker
         else if(last_hit_type == 2 && showMarker){
-            Text->RenderText("x", (SCR_WIDTH - 48.0f) / 2, (SCR_HEIGHT - 48.0f) / 2, 2.0f, glm::vec3(0.8f, 0.35f, 0.35f), decayAlpha);
+            Text->RenderText("x", (SCR_WIDTH ) / 2 - 27.5, SCR_HEIGHT/ 2 - 35, 2.0f, glm::vec3(0.8f, 0.35f, 0.35f), decayAlpha);
         }
         glEnable(GL_DEPTH_TEST);
 
