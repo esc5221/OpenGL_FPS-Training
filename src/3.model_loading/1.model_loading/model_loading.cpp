@@ -111,9 +111,9 @@ int main()
     Shader modelShader("shader_model.vs", "shader_model.fs");
     Shader colorShader("shader_color.vs", "shader_color.fs");
     Shader skyboxShader("shader_skybox.vs", "shader_skybox.fs");
+    
     // load models
     // -----------
-    //Model backModel(FileSystem::getPath("resources/objects/backpack/backpack.obj"));
     Model mapModel(FileSystem::getPath("resources/objects/map3/range_cut3.obj"));
     Model botModel(FileSystem::getPath("resources/objects/bot/training_bot5.obj"));
     Model boxModel(FileSystem::getPath("resources/objects/box/box.obj"));
@@ -150,7 +150,7 @@ int main()
     colorShader.use();
     colorShader.setFloat("alpha", 1.0f);
 
-    // Generate positions & rotations 
+    // Generate bot(hitbox) positions & rotations 
 	std::vector<float> respawnLeft(6);
 	std::vector<glm::vec3> positions(6);
 	std::vector<glm::vec3> positions_top(6);
@@ -166,6 +166,7 @@ int main()
     orientations[5] = glm::quat(glm::vec3(0.0f, 45.0f, 0.0f));
     positions_top[5] = glm::vec3(-2.0f, 2.0f, 1.0f);
     
+    // initilize text renderer
     TextRenderer *Text;
     Text = new TextRenderer(SCR_WIDTH, SCR_HEIGHT);
     Text->Load(FileSystem::getPath("resources/fonts/OCRAEXT.TTF").c_str(), 48);
@@ -192,19 +193,22 @@ int main()
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        decayAlpha = decayAlpha - deltaTime;
-        if(decayAlpha < 0.0f){
-            decayAlpha = 0.0f;
-            showMarker = false;
-        }
+
+        // initialize last ray variables
         if(isFirst){
-            std::cout << "isFirst" << std::endl;
             last_ray_origin = glm::vec3(0,0,0);
             last_ray_direction = glm::vec3(0,0,0);
             isFirst = false;
         }
 
-        // moving bot
+        // handle decaying alpha value (used in bullet trajectory, hit marker)
+        decayAlpha = decayAlpha - deltaTime;
+        if(decayAlpha < 0.0f){
+            decayAlpha = 0.0f;
+            showMarker = false;
+        }
+
+        // handle moving bot's position
         if(isForward){
             positions[5].x += 2*deltaTime;
             positions[5].z += 2*deltaTime;
@@ -217,6 +221,7 @@ int main()
         }
         positions_top[5] = glm::vec3(positions[5].x, positions[5].y+ 2.0f, positions[5].z);
 
+        // handle respawn
         for(int i=0; i<6; i++){
             if(respawnLeft[i] <= 3.0f){
                 respawnLeft[i] = respawnLeft[i] - deltaTime;
@@ -226,6 +231,7 @@ int main()
             }
         }
         message = "background";
+
         // input
         // -----
         processInput(window);
@@ -234,15 +240,6 @@ int main()
         // ------
         glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glLineWidth(4.0);
-        glColor3f(1.0, 0.0, 0.0);
-        glBegin(GL_LINES);
-            glVertex3f(0.0, 0.0, 0.0);
-            glVertex3f(15, 0, 1);
-        glEnd();
-
-        // don't forget to enable shader before setting uniforms
 
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -258,12 +255,14 @@ int main()
         glm::mat4 model = glm::mat4(1.0f);
         modelShader.use();
 
-		// PICKING IS DONE HERE
         glm::vec3 ray_origin;
         glm::vec3 ray_direction;
         int hit_type = 0;
+
+        // handle left mouse button click
 		if (handledMouse == false && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)){
 			handledMouse = true;
+            // generate ray
 			ScreenPosToWorldRay(
 				SCR_WIDTH/2, SCR_HEIGHT/2,
 				SCR_WIDTH, SCR_HEIGHT, 
@@ -271,21 +270,19 @@ int main()
 				projection, 
 				ray_origin, 
 				ray_direction
-			);	
+			);
+            // save last ray for rendering bullet trajectory
             if(ray_direction != glm::vec3(0,0,0)){
                 last_ray_origin = ray_origin;
                 last_ray_direction = ray_direction;
                 decayAlpha = 0.7f;
             }
 
-			// Test each each Oriented Bounding Box (OBB).
-			// A physics engine can be much smarter than this, 
-			// because it already has some spatial partitionning structure, 
-			// like Binary Space Partitionning Tree (BSP-Tree),
-			// Bounding Volume Hierarchy (BVH) or other.
+			// Test if each hitbox (OBB) intersect with ray
+            //   dead bots' hitboxes are not tested
 			for(int i=0; i<6; i++){
-
-				float intersection_distance; // Output of TestRayOBBIntersection()
+                // lower hitbox
+				float intersection_distance;
 				glm::vec3 aabb_min(-1.0f, -0.5f, -1.0f);
 				glm::vec3 aabb_max( 1.0f,  1.0f,  1.0f);
 
@@ -302,14 +299,12 @@ int main()
 					ModelMatrix,
 					intersection_distance) && respawnLeft[i] > 3.99f
 				){
-					std::ostringstream oss;
-					oss << "mesh " << i;
-					message = oss.str();
                     respawnLeft[i] = 3.0f;
                     hit_type = 1;
 					break;
 				}
 
+                // upper hitbox
                 aabb_min = glm::vec3(-1.0f, -1.0f, -1.0f);
                 aabb_max = glm::vec3( 1.0f,  1.0f,  1.0f);
 
@@ -324,18 +319,17 @@ int main()
 					ModelMatrix,
 					intersection_distance) && respawnLeft[i] > 3.99f
 				){
-					std::ostringstream oss;
-					oss << "mesh " << i;
-					message = oss.str();
                     respawnLeft[i] = 3.0f;
                     hit_type = 2;
 					break;
 				}
 			}
+            // missed
             if (hit_type == 0) {
                 missed += 1;
                 showMarker = false;
             }
+            // hitted
             else{
                 hitted += 1;
                 showMarker = true;
@@ -346,13 +340,14 @@ int main()
             handledMouse = false;
         }
 
-        // render the loaded model
+        // render map
         model = glm::mat4(1.0f);
         modelShader.setMat4("model", model);
         mapModel.Draw(modelShader);
 
-        // render bot
+        // render training bot
         for(int i=0; i<6; i++){
+            // if bot is alive, render it normally
             if(respawnLeft[i]>=3.99f){
                 model = glm::mat4(1.0f);
                 glm::mat4 RotationMatrix = glm::toMat4(orientations[i]);
@@ -363,14 +358,17 @@ int main()
                 modelShader.setFloat("alpha", 1.0f);
                 botModel.Draw(modelShader);
             }
+            // if bot is dead, render it with lower alpha value
             else{
                 model = glm::mat4(1.0f);
                 glm::vec3 euler = glm::eulerAngles(orientations[i]) * 3.14159f / 180.f;;
                 glm::mat4 RotationMatrix = glm::toMat4(glm::quat(glm::vec3(euler.x, euler.y, euler.z)));
+                // bot falls down for 0.2 seconds
                 if(respawnLeft[i]>=2.8f && respawnLeft[i]<=3.0f){
                     float angle = 0.5 * 3.14159f * (3.0f-respawnLeft[i]) / 0.2f;
                     RotationMatrix = glm::toMat4(glm::quat(glm::vec3(euler.x - angle, euler.y, euler.z)));
                 }
+                // after bot falls down, maintain the same orientation
                 else{
                     float angle = 0.5 * 3.14159f *1.0f;
                     RotationMatrix = glm::toMat4(glm::quat(glm::vec3(euler.x - angle, euler.y, euler.z)));
@@ -385,9 +383,9 @@ int main()
 		}
         modelShader.setFloat("alpha", 1.0f);
 
-
-        // render trans box
+        // render hitbox
         if(showHitbox){
+            // lower hitbox
             for(int i=0; i<6; i++){
                 model = glm::mat4(1.0f);
                 glm::mat4 RotationMatrix = glm::toMat4(orientations[i]);
@@ -397,6 +395,7 @@ int main()
                 modelShader.setMat4("model", ModelMatrix);
                 transboxModel.Draw(modelShader);
             }
+            // upper hitbox
             for(int i=0; i<6; i++){
                 model = glm::mat4(1.0f);
                 glm::mat4 RotationMatrix = glm::toMat4(orientations[i]);
@@ -408,6 +407,7 @@ int main()
             }
         }
 
+        // render bullet trajectory
         if(last_ray_direction!=glm::vec3(0,0,0)){
             // align object to the ray, with stretching towards the ray direction
             glm::vec3 ray_direction_normalized = glm::normalize(last_ray_direction);
@@ -424,7 +424,7 @@ int main()
                 for(int i=0; i<1000; i++){
                     model = glm::mat4(1.0f);
                     glm::vec3 object_position = last_ray_origin + 
-                                                ray_direction_normalized * (0.5f + 0.02f*i) + 
+                                                ray_direction_normalized * (0.5f + 0.02f * i) + 
                                                 glm::vec3(0.0f, -0.05f, 0.0f);
                     model = glm::translate(model, object_position);
                     model = model * object_rotation;
@@ -439,13 +439,14 @@ int main()
             }
         }
 
-        // use skybox Shader
+        // ----------------------
+        // render skybox
+        // ----------------------
         skyboxShader.use();
         glDepthFunc(GL_LEQUAL);
         view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
         skyboxShader.setMat4("view", view);
         skyboxShader.setMat4("projection", projection);
-        // render a skybox
         glBindVertexArray(VAOskybox);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTexture.textureID);
@@ -454,19 +455,25 @@ int main()
         glBindVertexArray(0);
         glDepthFunc(GL_LESS);
 
-        // render crosshair & hit mark
+        // ----------------------
+        // render billboards
+        // ----------------------
         glDisable(GL_DEPTH_TEST);
 
+        // render scores
         int accuracy = (hitted==0 && missed==0 )? 0 : int(100 * (float(hitted) / float(hitted + missed)));
-
         Text->RenderText("Killed  : " + std::to_string(hitted), 0.0f, 0.0f, 1.0f, glm::vec3(0.0f, 0.0f, 0.2f));
         Text->RenderText("Missed  : " + std::to_string(missed), 0.0f, 40.0f, 1.0f, glm::vec3(0.0f, 0.0f, 0.2f));
         Text->RenderText("Accuracy: " + std::to_string(accuracy) + "%", 0.0f, 80.0f, 1.0f, glm::vec3(0.0f, 0.0f, 0.2f));
 
+        // render crosshair & hit mark
+        //   crosshair
         Text->RenderText("+", (SCR_WIDTH-24.0f)/2, (SCR_HEIGHT-24.0f) / 2, 1.0f, glm::vec3(0.1f, 1.0f, 0.1f));
+        //   bodyshot hit marker
         if(last_hit_type == 1 && showMarker){
             Text->RenderText("x", (SCR_WIDTH ) / 2 - 27.5, SCR_HEIGHT/ 2 - 35, 2.0f, glm::vec3(0.8f, 0.8f, 0.8f), decayAlpha);
         }
+        //   headshot hit marker
         else if(last_hit_type == 2 && showMarker){
             Text->RenderText("x", (SCR_WIDTH - 48.0f) / 2, (SCR_HEIGHT - 48.0f) / 2, 2.0f, glm::vec3(0.8f, 0.35f, 0.35f), decayAlpha);
         }
@@ -486,12 +493,14 @@ int main()
     return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
+
 bool processedKey1 = false;
 bool isFirstJump = true;
 float jumpStartTime = 0.0f;
 
+// jump function : 
+//    return 1.8f if not in jump state.
+//    return calculated height if in jump state.
 float jump(bool jumpOngoing){
     if (jumpOngoing){
         float t = static_cast<float>(glfwGetTime()) - jumpStartTime;
@@ -502,6 +511,9 @@ float jump(bool jumpOngoing){
     }
     else return 1.8f;
 }
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -525,6 +537,7 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         testy -= 0.5f;
 
+    // toggle hitbox display
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && processedKey1 == false){
         showHitbox = !showHitbox;
         processedKey1 = true;   
@@ -532,14 +545,15 @@ void processInput(GLFWwindow *window)
     else if (glfwGetKey(window, GLFW_KEY_1) != GLFW_PRESS){
         processedKey1 = false;
     }
-
+    
+    // handle jump
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
         if(isFirstJump){
             jumpStartTime = static_cast<float>(glfwGetTime());
             isFirstJump = false;
         }
     }
-    camera.Position.y = jump(!isFirstJump);
+    camera.Position.y = jump(!isFirstJump); // jumpOngoing is true if isFirstJump is false.
     if(camera.Position.y < 1.8f){
         camera.Position.y = 1.8f;
         isFirstJump = true;
